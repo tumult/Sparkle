@@ -69,6 +69,9 @@
 	switch (choice)
 	{
 		case SUInstallUpdateChoice:
+            if([self abortIfOnReadOnlyVolume]) {
+                return;
+            }
 			statusController = [[SUStatusController alloc] initWithHost:host];
 			[statusController beginActionWithTitle:SULocalizedString(@"Downloading update...", @"Take care not to overflow the status window.") maxProgressValue:0.0 statusText:nil];
 			[statusController setButtonTitle:SULocalizedString(@"Cancel", nil) target:self action:@selector(cancelDownload:) isDefault:NO];

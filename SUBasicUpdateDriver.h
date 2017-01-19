@@ -24,6 +24,8 @@
 	NSString *relaunchPath;
 }
 
+- (BOOL)abortIfOnReadOnlyVolume;
+
 - (void)checkForUpdatesAtURL:(NSURL *)URL host:(SUHost *)host;
 
 - (void)appcastDidFinishLoading:(SUAppcast *)ac;
