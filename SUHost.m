@@ -91,7 +91,13 @@
 
 - (NSString *)name
 {
-	NSString *name = [bundle objectForInfoDictionaryKey:@"CFBundleDisplayName"];
+    NSString *name;
+    
+    // Allow host bundle to provide a custom name
+    name = [self objectForInfoDictionaryKey:@"SUBundleName"];
+    if (name && [name length] > 0) return name;
+    
+    name = [self.bundle objectForInfoDictionaryKey:@"CFBundleDisplayName"];
 	if (name) return name;
 	
 	name = [self objectForInfoDictionaryKey:@"CFBundleName"];
