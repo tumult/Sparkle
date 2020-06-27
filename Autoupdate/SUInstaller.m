@@ -76,6 +76,53 @@
                 newAppDownloadPath = currentPath;
                 break;
             }
+			else if (incomingBundle)
+			{
+                // When identifying updates to install from the downloaded update contents,
+                //  Sparkle by default searches for a folder in the downloaded directory which
+                //  matches the host app's file name, then looks for an installer package with
+                //  the same basename as the host app, and finally looks for a bundle with the
+                //  same identifier as the host app. There are some cases, however, when both
+                //  the update's file name and bundle identifier will be different -- notably,
+                //  when distributing an update that parallels what's just been made available
+                //  in the Mac App Store, which requires that apps have different bundle
+                //  identifiers and thus motivates changing both the app's name and
+                //  identifier. For cases like that, Sparkle can be more lax on bundle id
+                //  matching, and look for updates in the form of com.mycompany.myapp-2 or
+                //  com.mycompany.myapp3, which will match as valid updates to
+                //  com.mycompany.myapp. Turn the following on to allow for this more lax
+                //  bundle identifier validation.
+                // Try matching on the host's bundle identifier, suffixed with a single integer or a dash and a single integer.
+                // e.g. this will match if the host bundle identifier is com.company.yourapp and the incoming identifier is com.company.yourapp-2 or com.company.yourapp3
+
+
+				// Find the root bundle identifer by stripping off trailing numbers and, if one exists, a dash
+				NSRange rootBundleRange = [[[host bundle] bundleIdentifier] rangeOfCharacterFromSet:[[NSCharacterSet characterSetWithCharactersInString:@"0123456789"] invertedSet] options:NSBackwardsSearch];
+				NSString *rootBundleIdentifier = [[[host bundle] bundleIdentifier] substringToIndex:(rootBundleRange.location + 1)];
+				if ([rootBundleIdentifier characterAtIndex:rootBundleRange.location] == '-') {
+					rootBundleIdentifier = [rootBundleIdentifier substringToIndex:rootBundleRange.location];
+				}
+
+				// Now check to see if the incoming bundle identifer shares the same root and has a suffix that's either all numbers or a dash followed by numbers
+				BOOL validIncomingBundleIdentifier = NO;
+				NSRange originalBundleRange = [[incomingBundle bundleIdentifier] rangeOfString:rootBundleIdentifier options:NSAnchoredSearch];
+				if (originalBundleRange.length == [[incomingBundle bundleIdentifier] length]) {
+					validIncomingBundleIdentifier = YES;
+				} else {
+					NSString *bundleSuffix = [[incomingBundle bundleIdentifier] substringFromIndex:originalBundleRange.length];
+					if ([bundleSuffix characterAtIndex:0] == '-') {
+						bundleSuffix = [bundleSuffix substringFromIndex:1];
+					}
+					if ([bundleSuffix rangeOfCharacterFromSet:[[NSCharacterSet characterSetWithCharactersInString:@"0123456789"] invertedSet]].location == NSNotFound) {
+						validIncomingBundleIdentifier = YES;
+					}
+				}
+				if (validIncomingBundleIdentifier == YES) {
+					isPackage = NO;
+					newAppDownloadPath = currentPath;
+					break;
+				}
+			}
         }
 
         // Some DMGs have symlinks into /Applications! That's no good!
@@ -162,6 +209,11 @@
                 installationPath = normalizedInstallationPath;
             } else {
                 installationPath = host.bundlePath;
+            }
+            
+            // make sure a fuzzy match uses the new path
+            if (![[[host bundlePath] lastPathComponent] isEqualToString:[newDownloadPath lastPathComponent]]) {
+                installationPath = [[installationPath stringByDeletingLastPathComponent] stringByAppendingPathComponent:[newDownloadPath lastPathComponent]];
             }
             
             installer = [[SUPlainInstaller alloc] initWithHost:host bundlePath:newDownloadPath installationPath:installationPath];
